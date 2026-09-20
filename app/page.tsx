@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Search, Settings, Shield, LayoutList, History, Menu, X, ChevronDown, Check, CircleAlert, ExternalLink, Sun, Moon } from 'lucide-react';
+import { Search, Settings, Shield, LayoutList, History, Menu, X, ChevronDown, Check, CircleAlert, ExternalLink, Sun, Moon, LogIn, RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
 
 type Server={id:number; name:string; members:string; color:string; initials:string};
 const servers:Server[]=[
@@ -14,16 +15,18 @@ const servers:Server[]=[
  {id:8,name:'Indie Makers',members:'389 members',color:'#ac775c',initials:'IM'},
 ];
 export default function Home(){
- const [selected,setSelected]=useState<number[]>([]); const [protectedIds,setProtectedIds]=useState<number[]>([2,7]); const [query,setQuery]=useState(''); const [modal,setModal]=useState(false); const [screen,setScreen]=useState<'servers'|'history'|'protected'>('servers'); const [dark,setDark]=useState(true); const [menu,setMenu]=useState(false); const [demo,setDemo]=useState(false);
- const visible=useMemo(()=>servers.filter(s=>s.name.toLowerCase().includes(query.toLowerCase()) && (screen!=='protected'||protectedIds.includes(s.id))),[query,screen,protectedIds]);
+ const [serverData,setServerData]=useState<Server[]>(servers); const [connected,setConnected]=useState(false); const [loadingServers,setLoadingServers]=useState(false);
+ const [selected,setSelected]=useState<number[]>([]);
+ useEffect(()=>{fetch('/api/discord/guilds').then(r=>r.ok?r.json():null).then(data=>{if(data?.guilds){setConnected(true);setServerData(data.guilds)}}).catch(()=>{});},[]); const [protectedIds,setProtectedIds]=useState<number[]>([2,7]); const [query,setQuery]=useState(''); const [modal,setModal]=useState(false); const [screen,setScreen]=useState<'servers'|'history'|'protected'>('servers'); const [dark,setDark]=useState(true); const [menu,setMenu]=useState(false); const [demo,setDemo]=useState(false);
+ const visible=useMemo(()=>serverData.filter(s=>s.name.toLowerCase().includes(query.toLowerCase()) && (screen!=='protected'||protectedIds.includes(s.id))),[query,screen,protectedIds]);
  const toggle=(id:number)=>{if(protectedIds.includes(id))return; setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);};
- const selectedServers=servers.filter(s=>selected.includes(s.id));
+ const selectedServers=serverData.filter(s=>selected.includes(s.id));
  return <main className={dark?'app':'app light'}>
   <aside className={menu?'sidebar open':'sidebar'}><div className="brand"><div className="brandmark">D</div><div><b>DETACH</b><small>Clean up your Discord servers.</small></div><button className="close" onClick={()=>setMenu(false)}><X size={18}/></button></div>
    <nav><Nav active={screen==='servers'} icon={<LayoutList size={17}/>} label="Servers" onClick={()=>setScreen('servers')}/><Nav active={screen==='history'} icon={<History size={17}/>} label="History" onClick={()=>setScreen('history')}/><Nav active={screen==='protected'} icon={<Shield size={17}/>} label="Protected" count={protectedIds.length} onClick={()=>setScreen('protected')}/></nav>
    <div className="sidebarBottom"><Nav icon={<Settings size={17}/>} label="Settings"/><div className="account"><div className="avatar">JD</div><div><b>Jordan Davis</b><span>Discord connected</span></div><span className="online"/></div></div>
   </aside>
-  <section className="content"><header><button className="menubtn" onClick={()=>setMenu(true)}><Menu/></button><div><div className="eyebrow">WORKSPACE / {screen.toUpperCase()}</div><h1>{screen==='servers'?'My Servers':screen==='protected'?'Protected servers':'Cleanup history'}</h1><p>{screen==='servers'?'Select the servers you want to leave.':screen==='protected'?'These servers are kept safe from accidental selection.':'A record of your confirmed cleanup sessions.'}</p></div><div className="headerActions"><button className="iconBtn" onClick={()=>setDark(!dark)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="help">?</button></div></header>
+  <section className="content"><header><button className="menubtn" onClick={()=>setMenu(true)}><Menu/></button><div><div className="eyebrow">WORKSPACE / {screen.toUpperCase()}</div><h1>{screen==='servers'?'My Servers':screen==='protected'?'Protected servers':'Cleanup history'}</h1><p>{screen==='servers'?'Select the servers you want to leave.':screen==='protected'?'These servers are kept safe from accidental selection.':'A record of your confirmed cleanup sessions.'}</p></div><div className="headerActions"><button className="iconBtn" onClick={()=>setDark(!dark)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="help">?</button>{!connected&&<a className="connectBtn" href="/api/auth/discord"><LogIn size={15}/> Connect Discord</a>}</div></header>
    {screen==='history'?<HistoryView/>:<><div className="toolbar"><div className="search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search servers..."/></div><button className="sort">Recently active <ChevronDown size={15}/></button></div>
    <div className="listHeader"><span>{screen==='protected'?'PROTECTED SERVERS':'YOUR DISCORD SERVERS'} <b>{visible.length}</b></span><button onClick={()=>setSelected(visible.filter(s=>!protectedIds.includes(s.id)).map(s=>s.id))}>Select all visible</button><button onClick={()=>setSelected([])}>Clear</button></div>
    <div className="serverList">{visible.map(s=><div className={'serverRow '+(selected.includes(s.id)?'selected':'')} key={s.id} onClick={()=>toggle(s.id)}><button className={'checkbox '+(selected.includes(s.id)?'checked':'')} onClick={e=>{e.stopPropagation();toggle(s.id)}}>{selected.includes(s.id)&&<Check size={14}/>}</button><div className="serverIcon" style={{background:s.color}}>{s.initials}</div><div className="serverInfo"><b>{s.name}</b><span>{s.members}</span></div>{protectedIds.includes(s.id)&&<span className="protected"><Shield size={14}/> Protected</span>}<span className="rowArrow">›</span></div>)}</div>
