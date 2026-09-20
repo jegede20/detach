@@ -1,0 +1,38 @@
+'use client';
+import { useMemo, useState } from 'react';
+import { Search, Settings, Shield, LayoutList, History, Menu, X, ChevronDown, Check, CircleAlert, ExternalLink, Sun, Moon } from 'lucide-react';
+
+type Server={id:number; name:string; members:string; color:string; initials:string};
+const servers:Server[]=[
+ {id:1,name:'Crypto Community',members:'128 members',color:'#6274c7',initials:'CC'},
+ {id:2,name:'Developers Hub',members:'2,641 members',color:'#3b9e87',initials:'DH'},
+ {id:3,name:'NFT Alpha',members:'4,821 members',color:'#c36b8b',initials:'NA'},
+ {id:4,name:'Gaming Community',members:'642 members',color:'#be7c45',initials:'GC'},
+ {id:5,name:'Testnet Farmers',members:'1,208 members',color:'#5b8cb8',initials:'TF'},
+ {id:6,name:'Product Design',members:'96 members',color:'#9270b7',initials:'PD'},
+ {id:7,name:'Friends Server',members:'14 members',color:'#4e9b9a',initials:'FS'},
+ {id:8,name:'Indie Makers',members:'389 members',color:'#ac775c',initials:'IM'},
+];
+export default function Home(){
+ const [selected,setSelected]=useState<number[]>([]); const [protectedIds,setProtectedIds]=useState<number[]>([2,7]); const [query,setQuery]=useState(''); const [modal,setModal]=useState(false); const [screen,setScreen]=useState<'servers'|'history'|'protected'>('servers'); const [dark,setDark]=useState(true); const [menu,setMenu]=useState(false); const [demo,setDemo]=useState(false);
+ const visible=useMemo(()=>servers.filter(s=>s.name.toLowerCase().includes(query.toLowerCase()) && (screen!=='protected'||protectedIds.includes(s.id))),[query,screen,protectedIds]);
+ const toggle=(id:number)=>{if(protectedIds.includes(id))return; setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);};
+ const selectedServers=servers.filter(s=>selected.includes(s.id));
+ return <main className={dark?'app':'app light'}>
+  <aside className={menu?'sidebar open':'sidebar'}><div className="brand"><div className="brandmark">D</div><div><b>DETACH</b><small>Clean up your Discord servers.</small></div><button className="close" onClick={()=>setMenu(false)}><X size={18}/></button></div>
+   <nav><Nav active={screen==='servers'} icon={<LayoutList size={17}/>} label="Servers" onClick={()=>setScreen('servers')}/><Nav active={screen==='history'} icon={<History size={17}/>} label="History" onClick={()=>setScreen('history')}/><Nav active={screen==='protected'} icon={<Shield size={17}/>} label="Protected" count={protectedIds.length} onClick={()=>setScreen('protected')}/></nav>
+   <div className="sidebarBottom"><Nav icon={<Settings size={17}/>} label="Settings"/><div className="account"><div className="avatar">JD</div><div><b>Jordan Davis</b><span>Discord connected</span></div><span className="online"/></div></div>
+  </aside>
+  <section className="content"><header><button className="menubtn" onClick={()=>setMenu(true)}><Menu/></button><div><div className="eyebrow">WORKSPACE / {screen.toUpperCase()}</div><h1>{screen==='servers'?'My Servers':screen==='protected'?'Protected servers':'Cleanup history'}</h1><p>{screen==='servers'?'Select the servers you want to leave.':screen==='protected'?'These servers are kept safe from accidental selection.':'A record of your confirmed cleanup sessions.'}</p></div><div className="headerActions"><button className="iconBtn" onClick={()=>setDark(!dark)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="help">?</button></div></header>
+   {screen==='history'?<HistoryView/>:<><div className="toolbar"><div className="search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search servers..."/></div><button className="sort">Recently active <ChevronDown size={15}/></button></div>
+   <div className="listHeader"><span>{screen==='protected'?'PROTECTED SERVERS':'YOUR DISCORD SERVERS'} <b>{visible.length}</b></span><button onClick={()=>setSelected(visible.filter(s=>!protectedIds.includes(s.id)).map(s=>s.id))}>Select all visible</button><button onClick={()=>setSelected([])}>Clear</button></div>
+   <div className="serverList">{visible.map(s=><div className={'serverRow '+(selected.includes(s.id)?'selected':'')} key={s.id} onClick={()=>toggle(s.id)}><button className={'checkbox '+(selected.includes(s.id)?'checked':'')} onClick={e=>{e.stopPropagation();toggle(s.id)}}>{selected.includes(s.id)&&<Check size={14}/>}</button><div className="serverIcon" style={{background:s.color}}>{s.initials}</div><div className="serverInfo"><b>{s.name}</b><span>{s.members}</span></div>{protectedIds.includes(s.id)&&<span className="protected"><Shield size={14}/> Protected</span>}<span className="rowArrow">›</span></div>)}</div>
+   {selected.length>0&&<div className="actionbar"><div><strong>{selected.length} server{selected.length!==1?'s':''} selected</strong><span>Review before leaving</span></div><button className="clearBtn" onClick={()=>setSelected([])}>Clear selection</button><button className="leaveBtn" onClick={()=>setModal(true)}>Leave selected <span>→</span></button></div>}
+   </>}
+  </section>
+  {modal&&<div className="overlay"><div className="modal"><div className="modalIcon"><CircleAlert size={21}/></div><button className="modalClose" onClick={()=>setModal(false)}><X/></button><h2>Leave {selected.length} server{selected.length!==1?'s':''}?</h2><p>The following servers will be processed. This action only affects the servers listed below.</p><div className="confirmList">{selectedServers.map(s=><div key={s.id}><span className="miniIcon" style={{background:s.color}}>{s.initials}</span>{s.name}<Check size={15}/></div>)}</div><div className="notice"><Shield size={16}/> Detach will never select or process a server without your confirmation.</div><div className="modalActions"><button onClick={()=>setModal(false)}>Cancel</button><button className="continue" onClick={()=>{setModal(false);setDemo(true)}}>Continue <span>→</span></button></div></div></div>}
+  {demo&&<div className="overlay"><div className="modal processing"><div className="successMark"><Check/></div><h2>Automatic leaving unavailable</h2><p>Discord does not provide a supported API operation for applications to leave servers on your behalf. No servers were changed.</p><div className="notice"><ExternalLink size={16}/> Your selection is saved. Open Discord to leave these servers manually.</div><div className="manualList">{selectedServers.map(s=><div key={s.id}><span className="miniIcon" style={{background:s.color}}>{s.initials}</span>{s.name}<span className="manual">Manual action</span></div>)}</div><div className="modalActions"><button className="continue" onClick={()=>setDemo(false)}>Back to servers</button></div></div></div>}
+ </main>
+}
+function Nav({icon,label,active,count,onClick}:{icon:React.ReactNode;label:string;active?:boolean;count?:number;onClick?:()=>void}){return <button className={'navItem '+(active?'active':'')} onClick={onClick}>{icon}<span>{label}</span>{count&&<em>{count}</em>}</button>}
+function HistoryView(){return <div className="empty"><div className="emptyIcon"><History/></div><h2>No cleanup history yet</h2><p>Confirmed cleanup sessions will appear here.</p><button className="primary">Back to servers</button></div>}
